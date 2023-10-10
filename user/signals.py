@@ -9,7 +9,6 @@ from user.models import *
 @receiver(signals.post_migrate)
 @transaction.atomic
 def add_default_roles(sender, **kwargs):
-    print('me!')
     for role in settings.DEFAULT_ROLES:
         role_obj, created = Role.objects.get_or_create(title=role['title'])
         for permission in role['permissions']:
