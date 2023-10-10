@@ -12,32 +12,39 @@ def execute_with_permission(state, operate):
         @functools.wraps(func)
         def check_permission(self, request, *args, **kwargs):
             user = request.user
-            chk  = False
+            chk = False
+
             if user.pk and user.is_superuser:
                 chk = True
-            if (not chk) and user.pk:
+
+            if not chk and user.pk:
                 access = True
                 new_operate = operate
-                if operate in ["list","trash"]:
+
+                if operate in ["list", "trash"]:
                     new_operate = "read"
-                elif operate in ["recycle","status",]:
+                elif operate in ["create"]:
+                    new_operate = "write"
+                elif operate in ["recycle", "status"]:
                     new_operate = "update"
-                elif operate in ["some"]:
+                elif operate == "some":
                     new_operate = "delete"
                 elif operate == "multi_activation":
                     new_operate = "activation"
-                
+
                 if state == "user":
                     user_id = kwargs.get('pk', None)
-                    if operate in ["update","read"]:
+
+                    if operate in ["update", "read"]:
                         if user.pk == user_id:
                             chk = True
                     elif operate == "delete":
                         if user.pk == user_id:
-                            chk = False 
-                            access = False   
-                    elif operate in ["some","status","multi_activation"]:
+                            chk = False
+                            access = False
+                    elif operate in ["some", "status", "multi_activation"]:
                         user_ids = request.data.get('ids', None)
+
                         if user.pk in user_ids:
                             chk = False
                             access = False
@@ -49,14 +56,18 @@ def execute_with_permission(state, operate):
                     pass
                 elif state == "userrole":
                     pass
+                
+                if access and not chk:
+                    roles = Role.objects.filter(
+                        role_accesses__state__title=state,
+                        role_accesses__permissions__operate__title=new_operate
+                    ).distinct()
 
-                if access and (not chk):
-                    roles = Role.objects.filter(role_accesses__state__title=state, role_accesses__permissions__operate__title=new_operate).distinct()
                     if roles:
                         user_role = UserRole.objects.filter(user=user, role__in=roles)
+
                         if user_role:
                             chk = True
-            # Check:
             if chk:
                 return func(self, request, *args, **kwargs)
             elif user.pk:
@@ -64,10 +75,12 @@ def execute_with_permission(state, operate):
                     {
                         "code": "900",
                         "message": "Forbidden",
-                        "detail": "permission denid",
+                        "detail": "Permission denied",
                     }, status.HTTP_403_FORBIDDEN)
             else:
-                return Response({"code": "899","message": "user not recognized"},
-                                status.HTTP_401_UNAUTHORIZED)
+                return Response(
+                    {"code": "899", "message": "User not recognized"},
+                    status.HTTP_401_UNAUTHORIZED)
+
         return check_permission
     return decorator
