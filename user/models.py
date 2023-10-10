@@ -103,6 +103,11 @@ class RoleAccess(models.Model):
         verbose_name = "Role Access"
         verbose_name_plural = "Role Accesses"
     
+    def create(self, validated_data):
+        role = validated_data.get('role')
+        state = validated_data.get('state')
+        return self.objects.get_or_create(role=role, state=state)
+    
 class State(models.Model):
     title = models.CharField(max_length=100, unique=True)
     

@@ -115,7 +115,7 @@ class TaskViewSet(viewsets.GenericViewSet):
         serializer = TaskInfoSerializer(obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @execute_with_permission('task', 'trash')
+    @execute_with_permission('task', 'delete')
     def destroy(self, request, pk=None):
         obj = self.get_object(pk)
         if obj.status == User.Status.TRASH:

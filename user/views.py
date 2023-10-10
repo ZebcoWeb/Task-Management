@@ -233,6 +233,7 @@ class UserViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
     @transaction.atomic
+    @execute_with_permission('user', 'create')
     def create(self, request):
         data = get_dict_data(request.data)
         serializer = self.get_serializer(data=data, context={'request': request})
