@@ -26,6 +26,9 @@ INSTALLED_APPS = [
 
     # Local app
     'user',
+    'task',
+    'org',
+    'request',
     
 
     # Third party apps
@@ -132,6 +135,16 @@ REST_FRAMEWORK = {
     ],
 }
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization'
+        }
+    },
+    "DOC_EXPANSION": "None",  # "list",
+}
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5)

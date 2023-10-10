@@ -5,8 +5,10 @@ from rest_framework import serializers
 from rest_framework import status
 
 from django.conf import settings
+from django.db import models
 
-from user.models import User, Token
+from user.models import *
+from org.serializers import OrganizationSerializer
 from utilities.exceptions import ProjectException
 from utilities.functions import get_user, get_player_id, generate_new_token
 
@@ -16,6 +18,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ['first_name', 'last_name', 'username', 'password', 'id']
     
+    id = serializers.IntegerField(read_only=True)
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     username = serializers.CharField(max_length=100, required=True)
@@ -52,6 +55,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         new_instance.first_name = validated_data.get('first_name', None)
         new_instance.last_name = validated_data.get('last_name', None)
         new_instance.username = validated_data.get('username')
+        new_instance.status = User.Status.PUBLISH
+        new_instance.is_active = True
         new_instance.set_password(validated_data.get('password'))
         
         new_instance.save()
@@ -64,12 +69,178 @@ class UserInfoSerializer(serializers.Serializer):
     last_name   = serializers.CharField(read_only=True)
     name        = serializers.SerializerMethodField(read_only=True)
     username    = serializers.CharField(read_only=True)
+    organization = OrganizationSerializer(read_only=True)
     is_active   = serializers.BooleanField(read_only=True)
-    created_at     = serializers.DateTimeField(read_only=True)
+    created_at  = serializers.DateTimeField(read_only=True)
     
     def get_name(self, obj):
+        if not obj.first_name:
+            obj.first_name = ''
+        if not obj.last_name:
+            obj.last_name = ''
         name = "".join([obj.first_name, ' ', obj.last_name])
         return name
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'password', 'id', 'is_active']
+        read_only_fields = ['id', 'is_active']
+    
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=100, required=True)
+    password = serializers.CharField(max_length=130, required=True, write_only=True)
+    
+    def validate(self, data):
+        self.user  = get_user(context=self.context)
+        if not self.user.pk:
+            self.user = None
+        password  = data.get('password', None)
+        username  = data.get('username', None)
+
+        if User.objects.filter(username=username).exists():
+            raise ProjectException(
+                809, 
+                'validation error', 
+                'There is a user with this email in this system.', 
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        if password:
+            if len(password) < 8:
+                raise ProjectException(
+                        812, 
+                        'validation error', 
+                        "password cannot les than 8 digit",
+                        status.HTTP_400_BAD_REQUEST
+                    )
+        return data
+    
+    def create(self, validated_data):
+        validated_data["created_by"] = self.user
+        validated_data['modified_by'] = self.user
+        new_instance = self.Meta.model(**validated_data)
+        new_instance.first_name = validated_data.get('first_name', None)
+        new_instance.last_name = validated_data.get('last_name', None)
+        new_instance.username = validated_data.get('username')
+        new_instance.is_active = True
+        new_instance.status = User.Status.PUBLISH
+        new_instance.set_password(validated_data.get('password'))
+        
+        new_instance.save()
+        return new_instance
+    
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'new_password']
+        
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=100)
+    new_password = serializers.CharField(max_length=130, required=False, allow_blank=True)
+    
+    def validate(self, data):
+        self.user  = get_user(context=self.context)
+        if not self.user.pk:
+            self.user = None
+        new_password  = data.get('new_password', None)
+        username  = data.get('username', None)
+        instance = self.instance
+        if new_password:
+            if len(new_password) < 8:
+                raise ProjectException(
+                        812, 
+                        'validation error', 
+                        "password cannot les than 8 digit",
+                        status.HTTP_400_BAD_REQUEST
+                    )
+        if username:
+            if User.objects.filter(username=username).exclude(id=instance.id).exists():
+                raise ProjectException(
+                    809, 
+                    'validation error', 
+                    'There is a user with this email in this system.', 
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+            if len(username) < 4:
+                raise ProjectException(
+                        812, 
+                        'validation error', 
+                        "username cannot less than 4 digit",
+                        status.HTTP_400_BAD_REQUEST
+                    )
+        return data
+
+    def update(self, instance, validated_data):
+        validated_data['modified_by'] = self.user
+        new_password = validated_data.pop('new_password', None)    
+        for attr, value in validated_data.items():
+            if value:
+                setattr(instance, attr, value)
+        if new_password:
+            instance.set_password(new_password)
+        instance.save()
+        return instance
+    
+class UserStatusSerializer(serializers.Serializer):
+    class StatusChoices(models.TextChoices):
+        ACTIVE = 1
+        HIDE = 0
+        
+    ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
+        error_messages={
+            'does_not_exist':
+            "user does not exist",
+            'invalid': "invalid value"
+        }
+    )
+    status = serializers.ChoiceField(choices=StatusChoices.choices)
+    
+    def validate(self, data):
+        status = data.get('status',None)
+        if (status is None) and (status not in self.StatusChoices.values):
+            raise ProjectException(
+                827, 
+                'validation error', 
+                'Status is invalid.', 
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        return data
+    
+class UserRoleSerializer(serializers.Serializer):
+    class Meta:
+        model = UserRole
+        fields = ("id", "user", "role",)
+
+    user = serializers.PrimaryKeyRelatedField(
+            queryset=User.objects.all(),
+            error_messages={
+                "does_not_exist": "user does not exist",
+                "invalid": "invalid value",
+            },
+        )
+    role = serializers.PrimaryKeyRelatedField(
+            queryset=Role.objects.all(),
+            error_messages={
+                "does_not_exist": "role does not exist",
+                "invalid": "invalid value",
+            },
+        )
+    
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+    
+    def create(self, validated_data):
+        new_instance = self.Meta.model(**validated_data)
+        new_instance.save()
+        return new_instance
+    
     
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -107,16 +278,14 @@ class TokenSerializer(serializers.ModelSerializer):
         return new_instance
 
 class UserLoginSerializer(serializers.Serializer):
-    first_name = serializers.CharField(max_length=150, read_only=True)
-    last_name = serializers.CharField(max_length=150, read_only=True)
     username = serializers.CharField(max_length=100, required=True)
     password = serializers.CharField(max_length=130, required=True)
-    
-    is_active = serializers.BooleanField(read_only=True)
-    
+        
     def validate(self, data):
+        username = data.get('username')
+        password = data.get('password')
         try:
-            user = User.objects.get(username=data['username'])
+            user = User.objects.get(username=username)
         except User.DoesNotExist:
             raise ProjectException(
                 809, 
@@ -132,7 +301,7 @@ class UserLoginSerializer(serializers.Serializer):
                         status.HTTP_401_UNAUTHORIZED,
                     )
             
-        if not user.check_password(data['password']):
+        if not user.check_password(password):
             user.login_error += 1
             if user.login_error == settings.DEACTIVE_COUNT:
                 if user.is_active:
@@ -257,7 +426,7 @@ class RefreshTokenSerializer(serializers.Serializer):
         instance.access_token = instance.key
         return instance
                 
-class NoneSerializer(serializers.Serializer):
+class UserNoneSerializer(serializers.Serializer):
     pass
 
 # Sample for responses schema:

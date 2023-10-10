@@ -32,12 +32,13 @@ class BearerTokenAuthentication(TokenAuthentication):
                 date_time_now = datetime.strptime(datetime.utcnow().strftime('%B %d %Y - %H:%M:%S'), '%B %d %Y - %H:%M:%S')
                 req_player_id = get_player_id(request)[0]
                 if req_player_id != player_id:
-                    raise ProjectException(
-                        801,
-                        'authentication error',
-                        'The token is invalid for this system.',
-                        status_code=status.HTTP_401_UNAUTHORIZED
-                    )   
+                    # raise ProjectException(
+                    #     801,
+                    #     'authentication error',
+                    #     'The token is invalid for this system.',
+                    #     status_code=status.HTTP_401_UNAUTHORIZED
+                    # )   
+                    ...
                 elif date_time_now > date_time_exp:
                     raise ProjectException(
                         801,
