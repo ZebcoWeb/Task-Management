@@ -15,6 +15,11 @@ class CustomUserManager(UserManager):
         )
         user.set_password(password)
         user.save()
+        try:
+            admin_role = Role.objects.get(title='admin')
+            UserRole.objects.create(user=user, role=admin_role)
+        except Role.DoesNotExist:
+            pass
         return user
     
 
