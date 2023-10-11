@@ -1,14 +1,11 @@
-from django.db.models import signals
+from django.db import migrations
 from django.conf import settings
-from django.dispatch import receiver
-from django.db import transaction
-
-from user.models import *
 
 
-@receiver(signals.post_migrate)
-@transaction.atomic
-def add_default_roles(sender, **kwargs):
+from user.models import Role, State, Operate, Permission, RoleAccess
+
+
+def add_default_roles(apps, schema_editor):
     for role in settings.DEFAULT_ROLES:
         role_obj, created = Role.objects.get_or_create(title=role['title'])
         for permission in role['permissions']:
@@ -17,3 +14,15 @@ def add_default_roles(sender, **kwargs):
             for operate in permission['operates']:
                 operate_obj, operate_created = Operate.objects.get_or_create(title=operate)
                 Permission.objects.get_or_create(access=role_access, operate=operate_obj)
+                
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('user', '0006_user_organization'),
+    ]
+
+    operations = [
+        migrations.RunPython(add_default_roles),
+    ]
