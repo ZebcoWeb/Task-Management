@@ -216,7 +216,7 @@ class UserViewSet(viewsets.GenericViewSet):
                 status.HTTP_404_NOT_FOUND
             )
     
-    # def get_permissions(self):
+    def get_permissions(self):
         if self.action in ['resend',]:
             permission_classes = [AllowAny]
         else:
