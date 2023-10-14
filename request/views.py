@@ -29,8 +29,7 @@ class RequestViewSet(viewsets.GenericViewSet):
         elif 'org_manager' in role_list:
             return queryset.filter(organization=user.organization)
         else:
-            # return queryset.none()
-            return queryset.all()
+            return queryset.filter(user=user)
     
     def get_serializer_class(self):
         if self.action == 'status':

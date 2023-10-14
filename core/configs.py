@@ -35,6 +35,10 @@ DEFAULT_ROLES = [
                 'state': 'task',
                 'operates': ['list', 'update']
             },
+            {
+                'state': 'request',
+                'operates': ['list', 'update']
+            },
         ]
     },
     {
@@ -64,6 +68,10 @@ DEFAULT_ROLES = [
                 'state': 'task',
                 'operates': ['list', 'update']
             },
+            {
+                'state': 'request',
+                'operates': ['list', 'update']
+            },
         ]
     },
     {
@@ -85,6 +93,10 @@ DEFAULT_ROLES = [
                 'state': 'task',
                 'operates': ['create']
             },
+            {
+                'state': 'request',
+                'operates': ['list', 'create']
+            },
         ]
     },
     {
@@ -101,6 +113,10 @@ DEFAULT_ROLES = [
             {
                 'state': 'task',
                 'operates': ['create']
+            },
+            {
+                'state': 'request',
+                'operates': ['list', 'create']
             },
         ]
     },
