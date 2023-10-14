@@ -16,7 +16,7 @@ class OrganizationViewSet(viewsets.GenericViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
     permission_classes = ([AllowAny,])
-    # permission_classes = ([IsAuthenticated,])
+    permission_classes = ([IsAuthenticated,])
     
     def get_serializer_class(self):
         if self.action in ['join_org', 'left_org']:
