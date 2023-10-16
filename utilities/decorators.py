@@ -13,24 +13,9 @@ def execute_with_permission(state, operate):
         def check_permission(self, request, *args, **kwargs):
             user = request.user
             chk = False
-
-            if user.pk and user.is_superuser:
-                chk = True
-
-            if not chk and user.pk:
+            
+            if (not chk) and user.pk:
                 access = True
-                new_operate = operate
-
-                if operate in ["list", "trash"]:
-                    new_operate = "read"
-                elif operate in ["create"]:
-                    new_operate = "write"
-                elif operate in ["recycle", "status"]:
-                    new_operate = "update"
-                elif operate == "some":
-                    new_operate = "delete"
-                elif operate == "multi_activation":
-                    new_operate = "activation"
 
                 if state == "user":
                     user_id = kwargs.get('pk', None)
@@ -42,9 +27,8 @@ def execute_with_permission(state, operate):
                         if user.pk == user_id:
                             chk = False
                             access = False
-                    elif operate in ["some", "status", "multi_activation"]:
+                    elif operate in ["status"]:
                         user_ids = request.data.get('ids', None)
-
                         if user.pk in user_ids:
                             chk = False
                             access = False
@@ -60,7 +44,7 @@ def execute_with_permission(state, operate):
                 if access and not chk:
                     roles = Role.objects.filter(
                         role_accesses__state__title=state,
-                        role_accesses__permissions__operate__title=new_operate
+                        role_accesses__permissions__operate__title=operate
                     ).distinct()
 
                     if roles:
