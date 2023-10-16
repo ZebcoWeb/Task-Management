@@ -14,7 +14,6 @@ class RequestViewSet(viewsets.GenericViewSet):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
     permission_classes = ([IsAuthenticated,])
-    permission_classes = ([AllowAny,])
     
     
     def get_queryset(self):

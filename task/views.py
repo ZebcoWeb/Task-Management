@@ -16,7 +16,6 @@ from utilities.exceptions import ProjectException
 class TaskViewSet(viewsets.GenericViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
-    permission_classes = ([AllowAny,])
     permission_classes = ([IsAuthenticated,])
 
     def get_queryset(self):

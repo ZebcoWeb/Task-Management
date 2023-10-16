@@ -145,7 +145,7 @@ class DefualtViewSet(viewsets.GenericViewSet):
 class UserViewSet(viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = ([AllowAny])
+    permission_classes = ([IsAuthenticated])
     
     def get_queryset(self):
         queryset = self.queryset
@@ -215,14 +215,6 @@ class UserViewSet(viewsets.GenericViewSet):
                 'This primary key not found.',
                 status.HTTP_404_NOT_FOUND
             )
-    
-    def get_permissions(self):
-        if self.action in ['resend',]:
-            permission_classes = [AllowAny]
-        else:
-            permission_classes = [IsAuthenticated]
-
-        return [permission() for permission in permission_classes]
     
     @action(methods=['get'], detail=False)
     def me(self, request):
